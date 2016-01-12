@@ -36,21 +36,41 @@ predictSales <- function(){
   
   raw_data <- readCSV()
   
-  df <- sqldf( "select QTR_ID as x1, MONTH_ID as x2, YEAR_ID as x3, PRODUCTLINEID as x4, sum(SALES) as y 
+  
+  ## GRAFICAR VENTAS MENSUALES
+  rs <- sqldf( "SELECT YEAR_ID || '-' || MONTH_ID || '-' || '01'  as date,  sum(SALES) as sales 
                from raw_data 
-               group by 1,2,3,4
-               order by x1,x2,x3" )
+               group by 1
+               order by YEAR_ID, MONTH_ID" )
+  rs$date <- as.Date(rs$date, "%Y-%m-%d")
+  
+  print(rs)
+  
+  plot(x=rs$date, y=rs$sales,col='black',type="l" ) 
+  
+  df <- sqldf( "select QTR_ID as x1, MONTH_ID as x2, YEAR_ID as x3, PRODUCTLINEID as x4, STATE_ID as x5, sum(SALES) as y 
+               from raw_data 
+               group by 1,2,3,4,5
+               order by x3,x2" )
   
   
   
-  lm <- lm(y ~  x1 + x2 + x3 + x4, data = df)
+  lm <- lm(y ~  x1 + x2 + x3 + x4 + x5, data = df)
   summaryModel(summary(lm))
   
   res <- predict(lm,df)  
   df[, "trend"] <- res
   
-  print(df)
+  ## GRAFICAR VENTAS MENSUALES y la tendencia
+  rs <- sqldf( "SELECT x3 || '-' || x2 || '-' || '01'  as date,  sum(y) as sales, sum(trend) as trend
+               from df 
+               group by 1
+               order by x3,x2" )
+  rs$date <- as.Date(rs$date, "%Y-%m-%d")
   
+  print(rs)
   
+  plot(x=rs$date, y=rs$sales,col='black',type="l" ) 
+  points(x=rs$date , y=rs$trend, col='red', type='l', lwd=2) 
 }
 
